@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
-import os
-import pymupdf
+import pymupdf  # Ensure this is installed
 import tempfile
 from langchain.chains import RetrievalQA
 import io
@@ -35,6 +34,9 @@ header_html = """
 </div>
 """
 st.markdown(header_html, unsafe_allow_html=True)
+
+# Import fitz from pymupdf
+import fitz
 
 # Function to load PDF from file-like object
 @st.cache_data
@@ -253,27 +255,27 @@ def main():
                     with col3:
                         if (
                             st.button("Next Page")
-                            and st.session_state.current_page
-                            < st.session_state.total_pages - 1
+                            and st.session_state.current_page < st.session_state.total_pages - 1
                         ):
                             st.session_state.current_page += 1
 
-                    annotations = get_highlight_info(doc, st.session_state.sources)
+                    page_number = st.session_state.current_page
+                    page = doc.load_page(page_number)
+                    page_image = page.get_pixmap()
 
-                    if annotations:
-                        first_page = doc.load_page(st.session_state.current_page)
-                        pix = first_page.get_pixmap()
-                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                        st.image(img)
+                    st.image(page_image.tobytes(), use_column_width=True)
 
-                        for annotation in annotations:
-                            if annotation["page"] == st.session_state.current_page + 1:
-                                st.markdown(
-                                    f'<div style="position: absolute; left: {annotation["x"]}px; top: {annotation["y"]}px; width: {annotation["width"]}px; height: {annotation["height"]}px; border: 2px solid {annotation["color"]};"></div>',
-                                    unsafe_allow_html=True
-                                )
+                    highlights = get_highlight_info(doc, st.session_state.sources)
+                    if highlights:
+                        st.markdown("**Highlighted Excerpts:**")
+                        for highlight in highlights:
+                            st.markdown(f"**Page {highlight['page']}** - Highlighted at ({highlight['x']}, {highlight['y']})")
+
+                    st.write("**End of Document Highlights**")
+        else:
+            st.error("No documents found.")
     else:
-        st.write("No PDF files found in the repository.")
-
+        st.error("No PDFs available for download.")
+    
 if __name__ == "__main__":
     main()
