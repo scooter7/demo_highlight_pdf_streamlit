@@ -169,14 +169,20 @@ def main():
                         {"role": "assistant", "content": "Hello! How can I assist you today?"}
                     ]
 
+                # Display chat messages
                 for msg in st.session_state.chat_history:
-                    st.chat_message(msg["role"]).write(msg["content"])
+                    if msg["role"] == "user":
+                        st.markdown(f"**You**: {msg['content']}")
+                    else:
+                        st.markdown(f"**Assistant**: {msg['content']}")
 
-                if user_input := st.chat_input("Your message"):
+                # Chat input
+                user_input = st.text_input("Your message", key="user_input")
+                if st.button("Send"):
                     st.session_state.chat_history.append(
                         {"role": "user", "content": user_input}
                     )
-                    st.chat_message("user").write(user_input)
+                    st.markdown(f"**You**: {user_input}")
 
                     with st.spinner("Generating response..."):
                         try:
@@ -190,7 +196,7 @@ def main():
                             st.session_state.chat_history.append(
                                 {"role": "assistant", "content": answer}
                             )
-                            st.chat_message("assistant").write(answer)
+                            st.markdown(f"**Assistant**: {answer}")
 
                             st.session_state.sources = sources
                             st.session_state.chat_occurred = True
