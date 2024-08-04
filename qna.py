@@ -5,10 +5,8 @@ import pymupdf
 import tempfile
 from langchain.chains import RetrievalQA
 import io
-from streamlit_pdf_viewer import pdf_viewer
-import json
+from PIL import Image
 import requests
-from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Qdrant
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -62,8 +60,7 @@ def extract_documents_from_url(file_url):
     temp_file.write(response.content)
     temp_file.close()
     
-    loader = PyPDFLoader(temp_file.name)
-    documents = loader.load()
+    documents = load_pdf(temp_file.name)
     return documents
 
 def find_pages_with_excerpts(doc, excerpts):
@@ -179,105 +176,104 @@ def main():
         st.session_state.pdf_keywords = []
 
     pdf_files = download_pdf_files()
+    
     if pdf_files:
-        selected_pdf = st.selectbox("Select a PDF file to query:", options=pdf_files, key='selected_pdf')
+        file_url = pdf_files[0]  # Automatically use the first PDF
 
-        if selected_pdf:
-            file_url = selected_pdf
+        with st.spinner("Processing file..."):
+            documents = extract_documents_from_url(file_url)
+            response = requests.get(file_url)
+            st.session_state.doc = fitz.open(stream=io.BytesIO(response.content), filetype="pdf")
 
-            with st.spinner("Processing file..."):
-                documents = extract_documents_from_url(file_url)
-                response = requests.get(file_url)
-                st.session_state.doc = fitz.open(stream=io.BytesIO(response.content), filetype="pdf")
+        if documents:
+            qa = get_qa(documents)
 
-            if documents:
-                qa = get_qa(documents)
+            # Display chat messages
+            st.subheader("Chat History")
+            for msg in st.session_state.chat_history:
+                if msg["role"] == "user":
+                    st.markdown(f"**You**: {msg['content']}")
+                else:
+                    st.markdown(f"**Assistant**: {msg['content']}")
 
-                # Display chat messages
-                st.subheader("Chat History")
-                for msg in st.session_state.chat_history:
-                    if msg["role"] == "user":
-                        st.markdown(f"**You**: {msg['content']}")
-                    else:
-                        st.markdown(f"**Assistant**: {msg['content']}")
+            # Chat input
+            user_input = st.text_input("Enter your query to search in documents and craft new content", key="user_input")
+            if st.button("Send"):
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": user_input}
+                )
+                st.markdown(f"**You**: {user_input}")
 
-                # Chat input
-                user_input = st.text_input("Enter your query to search in documents and craft new content", key="user_input")
-                if st.button("Send"):
-                    st.session_state.chat_history.append(
-                        {"role": "user", "content": user_input}
-                    )
-                    st.markdown(f"**You**: {user_input}")
+                with st.spinner("Generating response..."):
+                    try:
+                        result = qa.invoke({"query": user_input})
+                        parsed_result = json.loads(result['result'])
 
-                    with st.spinner("Generating response..."):
-                        try:
-                            result = qa.invoke({"query": user_input})
-                            parsed_result = json.loads(result['result'])
+                        answer = parsed_result['answer']
+                        sources = parsed_result['sources']
+                        sources = sources.split(". ") if pd.notna(sources) else []
 
-                            answer = parsed_result['answer']
-                            sources = parsed_result['sources']
-                            sources = sources.split(". ") if pd.notna(sources) else []
+                        st.session_state.chat_history.append(
+                            {"role": "assistant", "content": answer}
+                        )
+                        st.markdown(f"**Assistant**: {answer}")
 
-                            st.session_state.chat_history.append(
-                                {"role": "assistant", "content": answer}
-                            )
-                            st.markdown(f"**Assistant**: {answer}")
+                        st.session_state.sources = sources
+                        st.session_state.chat_occurred = True
 
-                            st.session_state.sources = sources
-                            st.session_state.chat_occurred = True
+                    except json.JSONDecodeError:
+                        st.error(
+                            "There was an error parsing the response. Please try again."
+                        )
 
-                        except json.JSONDecodeError:
-                            st.error(
-                                "There was an error parsing the response. Please try again."
-                            )
+                if st.session_state.get("chat_occurred", False):
+                    doc = st.session_state.doc
+                    st.session_state.total_pages = len(doc)
+                    if "current_page" not in st.session_state:
+                        st.session_state.current_page = 0
 
-                    if st.session_state.get("chat_occurred", False):
-                        doc = st.session_state.doc
-                        st.session_state.total_pages = len(doc)
-                        if "current_page" not in st.session_state:
-                            st.session_state.current_page = 0
+                    pages_with_excerpts = find_pages_with_excerpts(doc, st.session_state.sources)
 
-                        pages_with_excerpts = find_pages_with_excerpts(doc, st.session_state.sources)
+                    if "current_page" not in st.session_state:
+                        st.session_state.current_page = pages_with_excerpts[0]
 
-                        if "current_page" not in st.session_state:
-                            st.session_state.current_page = pages_with_excerpts[0]
+                    st.session_state.cleaned_sources = st.session_state.sources
+                    st.session_state.pages_with_excerpts = pages_with_excerpts
 
-                        st.session_state.cleaned_sources = st.session_state.sources
-                        st.session_state.pages_with_excerpts = pages_with_excerpts
+                    st.markdown("### PDF Preview with Highlighted Excerpts")
 
-                        st.markdown("### PDF Preview with Highlighted Excerpts")
+                    col1, col2, col3 = st.columns([1, 3, 1])
+                    with col1:
+                        if st.button("Previous Page") and st.session_state.current_page > 0:
+                            st.session_state.current_page -= 1
+                    with col2:
+                        st.write(
+                            f"Page {st.session_state.current_page + 1} of {st.session_state.total_pages}"
+                        )
+                    with col3:
+                        if (
+                            st.button("Next Page")
+                            and st.session_state.current_page
+                            < st.session_state.total_pages - 1
+                        ):
+                            st.session_state.current_page += 1
 
-                        col1, col2, col3 = st.columns([1, 3, 1])
-                        with col1:
-                            if st.button("Previous Page") and st.session_state.current_page > 0:
-                                st.session_state.current_page -= 1
-                        with col2:
-                            st.write(
-                                f"Page {st.session_state.current_page + 1} of {st.session_state.total_pages}"
-                            )
-                        with col3:
-                            if (
-                                st.button("Next Page")
-                                and st.session_state.current_page
-                                < st.session_state.total_pages - 1
-                            ):
-                                st.session_state.current_page += 1
+                    annotations = get_highlight_info(doc, st.session_state.sources)
 
-                        page_num = st.session_state.current_page
-                        annotations = get_highlight_info(doc, st.session_state.sources)
-                        page = doc.load_page(page_num)
-                        pdf = page.get_pixmap()
-                        img = Image.open(io.BytesIO(pdf))
+                    if annotations:
+                        first_page = doc.load_page(st.session_state.current_page)
+                        pix = first_page.get_pixmap()
+                        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                         st.image(img)
 
-                        if annotations:
-                            st.markdown("#### Highlights")
-                            for annotation in annotations:
-                                st.write(f"Page: {annotation['page']}")
-                                st.write(f"Position: ({annotation['x']}, {annotation['y']})")
-                                st.write(f"Dimensions: {annotation['width']}x{annotation['height']}")
-                                st.write(f"Color: {annotation['color']}")
-                                st.write("---")
+                        for annotation in annotations:
+                            if annotation["page"] == st.session_state.current_page + 1:
+                                st.markdown(
+                                    f'<div style="position: absolute; left: {annotation["x"]}px; top: {annotation["y"]}px; width: {annotation["width"]}px; height: {annotation["height"]}px; border: 2px solid {annotation["color"]};"></div>',
+                                    unsafe_allow_html=True
+                                )
+    else:
+        st.write("No PDF files found in the repository.")
 
 if __name__ == "__main__":
     main()
