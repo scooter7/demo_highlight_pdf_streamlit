@@ -11,7 +11,7 @@ from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter
 from langchain.schema import Document
-import jsonlib as json  # Use jsonlib instead of json
+import json  # Import the standard json module
 
 # Set page config as the first Streamlit command
 st.set_page_config(
