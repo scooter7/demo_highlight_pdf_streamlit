@@ -236,7 +236,7 @@ if 'selected_pdf' in st.session_state:
                 if annotations:
                     first_page_with_excerpts = min(ann["page"] for ann in annotations)
                 else:
-                    first_page with_excerpts = st.session_state.current_page + 1
+                    first_page_with_excerpts = st.session_state.current_page + 1
 
                 pdf_viewer(
                     response.content,
