@@ -10,6 +10,7 @@ from langchain_community.vectorstores import Qdrant
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter
+from langchain.schema import Document
 
 # Set page config as the first Streamlit command
 st.set_page_config(
@@ -58,7 +59,13 @@ def extract_documents_from_url(file_url):
     temp_file.close()
     
     with open(temp_file.name, "rb") as f:
-        documents = fitz.open(stream=f.read(), filetype="pdf")
+        doc = fitz.open(stream=f.read(), filetype="pdf")
+    
+    documents = []
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        text = page.get_text()
+        documents.append(Document(page_content=text, metadata={"page_number": page_num+1}))
     
     return documents
 
