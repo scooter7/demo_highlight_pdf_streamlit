@@ -8,4 +8,3 @@ streamlit
 streamlit_pdf_viewer
 pymupdf
 qdrant-client
-json
