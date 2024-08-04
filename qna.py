@@ -151,97 +151,97 @@ CUSTOM_PROMPT = PromptTemplate(
 # Main functionality
 pdf_files = download_pdf_files()
 if pdf_files:
-    st.selectbox("Select a PDF file to query:", options=pdf_files, key='selected_pdf')
+    selected_pdf = st.selectbox("Select a PDF file to query:", options=pdf_files, key='selected_pdf')
 
-if 'selected_pdf' in st.session_state:
-    file_url = st.session_state.selected_pdf
+    if selected_pdf:
+        file_url = selected_pdf
 
-    with st.spinner("Processing file..."):
-        documents = extract_documents_from_url(file_url)
-        response = requests.get(file_url)
-        st.session_state.doc = fitz.open(stream=io.BytesIO(response.content), filetype="pdf")
+        with st.spinner("Processing file..."):
+            documents = extract_documents_from_url(file_url)
+            response = requests.get(file_url)
+            st.session_state.doc = fitz.open(stream=io.BytesIO(response.content), filetype="pdf")
 
-    if documents:
-        qa = get_qa(documents)
-        if "chat_history" not in st.session_state:
-            st.session_state.chat_history = [
-                {"role": "assistant", "content": "Hello! How can I assist you today?"}
-            ]
+        if documents:
+            qa = get_qa(documents)
+            if "chat_history" not in st.session_state:
+                st.session_state.chat_history = [
+                    {"role": "assistant", "content": "Hello! How can I assist you today?"}
+                ]
 
-        for msg in st.session_state.chat_history:
-            st.chat_message(msg["role"]).write(msg["content"])
+            for msg in st.session_state.chat_history:
+                st.chat_message(msg["role"]).write(msg["content"])
 
-        if user_input := st.chat_input("Your message"):
-            st.session_state.chat_history.append(
-                {"role": "user", "content": user_input}
-            )
-            st.chat_message("user").write(user_input)
-
-            with st.spinner("Generating response..."):
-                try:
-                    result = qa.invoke({"query": user_input})
-                    parsed_result = json.loads(result['result'])
-
-                    answer = parsed_result['answer']
-                    sources = parsed_result['sources']
-                    sources = sources.split(". ") if pd.notna(sources) else []
-
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": answer}
-                    )
-                    st.chat_message("assistant").write(answer)
-
-                    st.session_state.sources = sources
-                    st.session_state.chat_occurred = True
-
-                except json.JSONDecodeError:
-                    st.error(
-                        "There was an error parsing the response. Please try again."
-                    )
-
-            if st.session_state.get("chat_occurred", False):
-                doc = st.session_state.doc
-                st.session_state.total_pages = len(doc)
-                if "current_page" not in st.session_state:
-                    st.session_state.current_page = 0
-
-                pages_with_excerpts = find_pages_with_excerpts(doc, sources)
-
-                if "current_page" not in st.session_state:
-                    st.session_state.current_page = pages_with_excerpts[0]
-
-                st.session_state.cleaned_sources = sources
-                st.session_state.pages_with_excerpts = pages_with_excerpts
-
-                st.markdown("### PDF Preview with Highlighted Excerpts")
-
-                col1, col2, col3 = st.columns([1, 3, 1])
-                with col1:
-                    if st.button("Previous Page") and st.session_state.current_page > 0:
-                        st.session_state.current_page -= 1
-                with col2:
-                    st.write(
-                        f"Page {st.session_state.current_page + 1} of {st.session_state.total_pages}"
-                    )
-                with col3:
-                    if (
-                        st.button("Next Page")
-                        and st.session_state.current_page
-                        < st.session_state.total_pages - 1
-                    ):
-                        st.session_state.current_page += 1
-
-                annotations = get_highlight_info(doc, st.session_state.sources)
-
-                if annotations:
-                    first_page_with_excerpts = min(ann["page"] for ann in annotations)
-                else:
-                    first_page_with_excerpts = st.session_state.current_page + 1
-
-                pdf_viewer(
-                    response.content,
-                    width=700,
-                    height=800,
-                    annotations=annotations,
-                    pages_to_render=[first_page_with_excerpts],
+            if user_input := st.chat_input("Your message"):
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": user_input}
                 )
+                st.chat_message("user").write(user_input)
+
+                with st.spinner("Generating response..."):
+                    try:
+                        result = qa.invoke({"query": user_input})
+                        parsed_result = json.loads(result['result'])
+
+                        answer = parsed_result['answer']
+                        sources = parsed_result['sources']
+                        sources = sources.split(". ") if pd.notna(sources) else []
+
+                        st.session_state.chat_history.append(
+                            {"role": "assistant", "content": answer}
+                        )
+                        st.chat_message("assistant").write(answer)
+
+                        st.session_state.sources = sources
+                        st.session_state.chat_occurred = True
+
+                    except json.JSONDecodeError:
+                        st.error(
+                            "There was an error parsing the response. Please try again."
+                        )
+
+                if st.session_state.get("chat_occurred", False):
+                    doc = st.session_state.doc
+                    st.session_state.total_pages = len(doc)
+                    if "current_page" not in st.session_state:
+                        st.session_state.current_page = 0
+
+                    pages_with_excerpts = find_pages_with_excerpts(doc, sources)
+
+                    if "current_page" not in st.session_state:
+                        st.session_state.current_page = pages_with_excerpts[0]
+
+                    st.session_state.cleaned_sources = sources
+                    st.session_state.pages_with_excerpts = pages_with_excerpts
+
+                    st.markdown("### PDF Preview with Highlighted Excerpts")
+
+                    col1, col2, col3 = st.columns([1, 3, 1])
+                    with col1:
+                        if st.button("Previous Page") and st.session_state.current_page > 0:
+                            st.session_state.current_page -= 1
+                    with col2:
+                        st.write(
+                            f"Page {st.session_state.current_page + 1} of {st.session_state.total_pages}"
+                        )
+                    with col3:
+                        if (
+                            st.button("Next Page")
+                            and st.session_state.current_page
+                            < st.session_state.total_pages - 1
+                        ):
+                            st.session_state.current_page += 1
+
+                    annotations = get_highlight_info(doc, st.session_state.sources)
+
+                    if annotations:
+                        first_page_with_excerpts = min(ann["page"] for ann in annotations)
+                    else:
+                        first_page_with_excerpts = st.session_state.current_page + 1
+
+                    pdf_viewer(
+                        response.content,
+                        width=700,
+                        height=800,
+                        annotations=annotations,
+                        pages_to_render=[first_page_with_excerpts],
+                    )
