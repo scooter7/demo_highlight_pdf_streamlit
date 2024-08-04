@@ -38,11 +38,6 @@ st.markdown(header_html, unsafe_allow_html=True)
 # Import fitz from pymupdf
 import fitz
 
-# Function to load PDF from file-like object
-@st.cache_data
-def load_pdf(file):
-    return fitz.open(stream=file, filetype="pdf")
-
 # Function to download PDF files from the GitHub repository
 def download_pdf_files():
     repo_url = "https://api.github.com/repos/scooter7/demo_highlight_pdf_streamlit/contents/Docs"
@@ -63,7 +58,7 @@ def extract_documents_from_url(file_url):
     temp_file.close()
     
     with open(temp_file.name, "rb") as f:
-        documents = load_pdf(f.read())
+        documents = fitz.open(stream=f.read(), filetype="pdf")
     
     return documents
 
