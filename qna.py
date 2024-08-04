@@ -28,16 +28,14 @@ def load_pdf(file):
 
 # Function to download PDF files from the GitHub repository
 def download_pdf_files():
-    repo_url = "https://github.com/scooter7/demo_highlight_pdf_streamlit/tree/main/Docs"
+    repo_url = "https://api.github.com/repos/scooter7/demo_highlight_pdf_streamlit/contents/Docs"
     response = requests.get(repo_url)
     pdf_files = []
     if response.status_code == 200:
-        # Extract links to the PDF files from the HTML content
-        links = response.content.decode('utf-8').split('<a href="')
-        for link in links:
-            if link.endswith('.pdf">'):
-                pdf_url = "https://github.com" + link.split('"')[0]
-                pdf_files.append(pdf_url)
+        contents = response.json()
+        for item in contents:
+            if item['name'].endswith('.pdf'):
+                pdf_files.append(item['download_url'])
     return pdf_files
 
 # Custom function to extract document objects from file URL
@@ -150,6 +148,40 @@ CUSTOM_PROMPT = PromptTemplate(
 
 # Main functionality
 def main():
+    st.set_page_config(
+        page_title="Proposal Toolkit",
+        page_icon="https://raw.githubusercontent.com/scooter7/ask-multiple-pdfs/main/ACE_92x93.png"
+    )
+    
+    hide_toolbar_css = """
+    <style>
+        .css-14xtw13.e8zbici0 { display: none !important; }
+    </style>
+    """
+    st.markdown(hide_toolbar_css, unsafe_allow_html=True)
+
+    header_html = """
+    <div style="text-align: center;">
+        <h1 style="font-weight: bold;">Proposal Toolkit</h1>
+        <img src="https://www.carnegiehighered.com/wp-content/uploads/2021/11/Twitter-Image-2-2021.png" alt="Icon" style="height:200px; width:500px;">
+        <p align="left">Find and develop proposal resources. The text entry field will appear momentarily.</p>
+    </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
+
+    if 'conversation_chain' not in st.session_state:
+        st.session_state.conversation_chain = None
+    if 'metadata' not in st.session_state:
+        st.session_state.metadata = []
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'uploaded_pdf_text' not in st.session_state:
+        st.session_state.uploaded_pdf_text = None
+    if 'institution_name' not in st.session_state:
+        st.session_state.institution_name = None
+    if 'pdf_keywords' not in st.session_state:
+        st.session_state.pdf_keywords = []
+
     pdf_files = download_pdf_files()
     if pdf_files:
         selected_pdf = st.selectbox("Select a PDF file to query:", options=pdf_files, key='selected_pdf')
@@ -164,12 +196,9 @@ def main():
 
             if documents:
                 qa = get_qa(documents)
-                if "chat_history" not in st.session_state:
-                    st.session_state.chat_history = [
-                        {"role": "assistant", "content": "Hello! How can I assist you today?"}
-                    ]
 
                 # Display chat messages
+                st.subheader("Chat History")
                 for msg in st.session_state.chat_history:
                     if msg["role"] == "user":
                         st.markdown(f"**You**: {msg['content']}")
@@ -177,7 +206,7 @@ def main():
                         st.markdown(f"**Assistant**: {msg['content']}")
 
                 # Chat input
-                user_input = st.text_input("Your message", key="user_input")
+                user_input = st.text_input("Enter your query to search in documents and craft new content", key="user_input")
                 if st.button("Send"):
                     st.session_state.chat_history.append(
                         {"role": "user", "content": user_input}
