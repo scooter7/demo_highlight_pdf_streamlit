@@ -13,7 +13,6 @@ from langchain_community.vectorstores import Qdrant
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter
-import PyMuPDF
 
 # Set page config
 st.set_page_config(page_title="📚 ChatPDF")
@@ -237,7 +236,7 @@ if 'selected_pdf' in st.session_state:
                 if annotations:
                     first_page_with_excerpts = min(ann["page"] for ann in annotations)
                 else:
-                    first_page_with_excerpts = st.session_state.current_page + 1
+                    first_page with_excerpts = st.session_state.current_page + 1
 
                 pdf_viewer(
                     response.content,
