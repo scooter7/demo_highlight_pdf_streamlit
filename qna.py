@@ -108,8 +108,8 @@ def get_qa(_documents):
 def get_highlight_info(doc, excerpts):
     annotations = []
     for page_num in range(len(doc)):
-        page = doc[page_num]
-        for excerpt:
+        page = doc.load_page(page_num)
+        for excerpt in excerpts:
             text_instances = page.search_for(excerpt)
             if text_instances:
                 for inst in text_instances:
@@ -151,7 +151,7 @@ CUSTOM_PROMPT = PromptTemplate(
 # Main functionality
 pdf_files = download_pdf_files()
 if pdf_files:
-    st.selectbox("Select a PDF file to query:", options=pdf_files)
+    st.selectbox("Select a PDF file to query:", options=pdf_files, key='selected_pdf')
 
 if 'selected_pdf' in st.session_state:
     file_url = st.session_state.selected_pdf
