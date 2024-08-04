@@ -15,7 +15,7 @@ import json  # Import the standard json module
 
 # Set page config as the first Streamlit command
 st.set_page_config(
-    page_title="Proposal Toolkit",
+    page_title="Past Proposal Q&A",
     page_icon="https://raw.githubusercontent.com/scooter7/ask-multiple-pdfs/main/ACE_92x93.png"
 )
 
@@ -30,7 +30,7 @@ st.markdown(hide_toolbar_css, unsafe_allow_html=True)
 # Main content
 header_html = """
 <div style="text-align: center;">
-    <h1 style="font-weight: bold;">Proposal Toolkit</h1>
+    <h1 style="font-weight: bold;">Past Proposal Q&A</h1>
     <img src="https://www.carnegiehighered.com/wp-content/uploads/2021/11/Twitter-Image-2-2021.png" alt="Icon" style="height:200px; width:500px;">
     <p align="left">Find and develop proposal resources. The text entry field will appear momentarily.</p>
 </div>
@@ -204,7 +204,7 @@ def main():
                     st.markdown(f"**Assistant**: {msg['content']}")
 
             # Chat input
-            user_input = st.text_input("Enter your query to search in documents and craft new content", key="user_input")
+            user_input = st.text_input("Enter your query to search past Q&A", key="user_input")
             if st.button("Send"):
                 st.session_state.chat_history.append(
                     {"role": "user", "content": user_input}
