@@ -13,6 +13,7 @@ from langchain_community.vectorstores import Qdrant
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter
+import PyMuPDF
 
 # Set page config
 st.set_page_config(page_title="📚 ChatPDF")
