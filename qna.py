@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 import os
-import fitz  # PyMuPDF
+import pymupdf
 import tempfile
 from langchain.chains import RetrievalQA
 import io
