@@ -67,7 +67,7 @@ def get_llm():
     llm = ChatOpenAI(
         model="gpt-3.5-turbo", 
         temperature=0, 
-        openai_api_key=st.secrets["openai_api_key"]
+        openai_api_key=st.secrets["openai"]["api_key"]
     )
     return llm
 
@@ -75,7 +75,7 @@ def get_llm():
 def get_embeddings():
     embeddings = OpenAIEmbeddings(
         model="text-embedding-ada-002", 
-        openai_api_key=st.secrets["openai_api_key"]
+        openai_api_key=st.secrets["openai"]["api_key"]
     )
     return embeddings
 
@@ -109,7 +109,7 @@ def get_highlight_info(doc, excerpts):
     annotations = []
     for page_num in range(len(doc)):
         page = doc[page_num]
-        for excerpt in excerpts:
+        for excerpt:
             text_instances = page.search_for(excerpt)
             if text_instances:
                 for inst in text_instances:
