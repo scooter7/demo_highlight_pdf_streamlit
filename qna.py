@@ -62,7 +62,9 @@ def extract_documents_from_url(file_url):
     temp_file.write(response.content)
     temp_file.close()
     
-    documents = load_pdf(temp_file.name)
+    with open(temp_file.name, "rb") as f:
+        documents = load_pdf(f.read())
+    
     return documents
 
 def find_pages_with_excerpts(doc, excerpts):
@@ -248,16 +250,13 @@ def main():
                     with col1:
                         if st.button("Previous Page") and st.session_state.current_page > 0:
                             st.session_state.current_page -= 1
+
                     with col2:
-                        st.write(
-                            f"Page {st.session_state.current_page + 1} of {st.session_state.total_pages}"
-                        )
+                        st.markdown(f"**Page {st.session_state.current_page + 1} of {st.session_state.total_pages}**")
+
                     with col3:
-                        if (
-                            st.button("Next Page")
-                            and st.session_state.current_page < st.session_state.total_pages - 1
-                        ):
-                            st.session_state.current_page += 1
+                        if st.session_state.current_page < st.session_state.total_pages - 1:
+                            st.button("Next Page", on_click=lambda: st.session_state.update({"current_page": st.session_state.current_page + 1}))
 
                     page_number = st.session_state.current_page
                     page = doc.load_page(page_number)
@@ -276,6 +275,6 @@ def main():
             st.error("No documents found.")
     else:
         st.error("No PDFs available for download.")
-    
+
 if __name__ == "__main__":
     main()
