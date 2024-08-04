@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 import os
-import pymupdf
+import fitz  # PyMuPDF
 import tempfile
 from langchain.chains import RetrievalQA
 import io
@@ -14,12 +14,29 @@ from langchain_core.prompts import PromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import CharacterTextSplitter
 
-# Set page config
-st.set_page_config(page_title="📚 ChatPDF")
+# Set page config as the first Streamlit command
+st.set_page_config(
+    page_title="Proposal Toolkit",
+    page_icon="https://raw.githubusercontent.com/scooter7/ask-multiple-pdfs/main/ACE_92x93.png"
+)
+
+# Hide the toolbar
+hide_toolbar_css = """
+<style>
+    .css-14xtw13.e8zbici0 { display: none !important; }
+</style>
+"""
+st.markdown(hide_toolbar_css, unsafe_allow_html=True)
 
 # Main content
-st.markdown("<h1 style='text-align: center;'>📚 ChatPDF</h1>", unsafe_allow_html=True)
-st.subheader("Query documents stored in the repository to get started.")
+header_html = """
+<div style="text-align: center;">
+    <h1 style="font-weight: bold;">Proposal Toolkit</h1>
+    <img src="https://www.carnegiehighered.com/wp-content/uploads/2021/11/Twitter-Image-2-2021.png" alt="Icon" style="height:200px; width:500px;">
+    <p align="left">Find and develop proposal resources. The text entry field will appear momentarily.</p>
+</div>
+"""
+st.markdown(header_html, unsafe_allow_html=True)
 
 # Function to load PDF from file-like object
 @st.cache_data
@@ -148,27 +165,6 @@ CUSTOM_PROMPT = PromptTemplate(
 
 # Main functionality
 def main():
-    st.set_page_config(
-        page_title="Proposal Toolkit",
-        page_icon="https://raw.githubusercontent.com/scooter7/ask-multiple-pdfs/main/ACE_92x93.png"
-    )
-    
-    hide_toolbar_css = """
-    <style>
-        .css-14xtw13.e8zbici0 { display: none !important; }
-    </style>
-    """
-    st.markdown(hide_toolbar_css, unsafe_allow_html=True)
-
-    header_html = """
-    <div style="text-align: center;">
-        <h1 style="font-weight: bold;">Proposal Toolkit</h1>
-        <img src="https://www.carnegiehighered.com/wp-content/uploads/2021/11/Twitter-Image-2-2021.png" alt="Icon" style="height:200px; width:500px;">
-        <p align="left">Find and develop proposal resources. The text entry field will appear momentarily.</p>
-    </div>
-    """
-    st.markdown(header_html, unsafe_allow_html=True)
-
     if 'conversation_chain' not in st.session_state:
         st.session_state.conversation_chain = None
     if 'metadata' not in st.session_state:
@@ -241,12 +237,12 @@ def main():
                         if "current_page" not in st.session_state:
                             st.session_state.current_page = 0
 
-                        pages_with_excerpts = find_pages_with_excerpts(doc, sources)
+                        pages_with_excerpts = find_pages_with_excerpts(doc, st.session_state.sources)
 
                         if "current_page" not in st.session_state:
                             st.session_state.current_page = pages_with_excerpts[0]
 
-                        st.session_state.cleaned_sources = sources
+                        st.session_state.cleaned_sources = st.session_state.sources
                         st.session_state.pages_with_excerpts = pages_with_excerpts
 
                         st.markdown("### PDF Preview with Highlighted Excerpts")
